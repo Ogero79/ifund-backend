@@ -21,6 +21,7 @@ app.use(
     origin: "https://ifundapp.netlify.app",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+    allowedHeaders: "Content-Type, Authorization",
   })
 );
 
