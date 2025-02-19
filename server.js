@@ -2699,7 +2699,7 @@ app.get("/api/interests/performance/:userId", async (req, res) => {
   }
 });
 
-app.delete("/superadmin/users/:userId", authenticateToken, authorizeRole("superadmin"), async (req, res) => {
+app.delete("/superadmin/users/:userId", async (req, res) => {
   const { userId } = req.params;
   
   try {
