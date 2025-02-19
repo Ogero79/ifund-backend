@@ -343,7 +343,7 @@ app.post("/api/register/step4", async (req, res) => {
           `<h1 style="color: #1FC17B;">Welcome to iFund – Your Financial Journey Begins!</h1>
            <p>Dear Valued Member,</p>
            <p>Congratulations! Your registration with <strong>iFund</strong> is now complete. We're thrilled to have you on board as part of our growing community.</p>
-           <p>iFund empowers you to take control of your savings and financial goals effortlessly. <a href="https://your-ifund-platform.com/login" style="color: #1FC17B; font-weight: bold;">Log in</a> and get started today!</p>
+           <p>iFund empowers you to take control of your savings and financial goals effortlessly. <a href="https://ifundapp.netlify.app/login" style="color: #1FC17B; font-weight: bold;">Log in</a> and get started today!</p>
            <p>If you have any questions, feel free to reach out to our <a href="mailto:support@ifund.com" style="color: #1FC17B;">support team</a>.</p>
            <br>
            <p>Best regards,</p>
@@ -639,7 +639,7 @@ app.post("/api/forgot-password", async (req, res) => {
       [token, email]
     );
 
-    const resetLink = `http://localhost:5173/reset-password/${token}`;
+    const resetLink = `https://ifundapp.netlify.app/reset-password/${token}`;
 
     // Send email asynchronously
     (async () => {
@@ -793,7 +793,7 @@ app.post("/api/deposits", async (req, res) => {
 app.post("/api/goals", upload.single("image"), async (req, res) => {
   const { user_id, title, target_amount, description, end_date, deposit } =
     req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
+  const image = req.file ? req.files["image"]?.[0]?.path : null;
   if (
     !user_id ||
     !title ||
@@ -1119,11 +1119,8 @@ app.get("/api/goals/:userId", async (req, res) => {
       `;
       const goalsResult = await client.query(goalsQuery, [userId]);
 
-      const baseUrl = "http://localhost:5000";
-
       const goals = goalsResult.rows.map((goal) => ({
         ...goal,
-        image_url: goal.image_path ? `${baseUrl}${goal.image_path}` : null,
       }));
 
       await client.query("COMMIT");
@@ -1184,12 +1181,6 @@ app.get("/api/goal/:goalId", async (req, res) => {
 
       const goal = goalResult.rows[0];
 
-      if (goal.image_path) {
-        const baseUrl = "http://localhost:5000";
-        goal.image_url = `${baseUrl}${goal.image_path}`;
-        delete goal.image_path;
-      }
-
       const membersQuery = `
       SELECT 
         cm.user_id, 
@@ -1239,7 +1230,7 @@ app.get("/api/goal/:goalId", async (req, res) => {
 app.put("/api/goals/:goalId", upload.single("image"), async (req, res) => {
   const { goalId } = req.params;
   const { title, target_amount, description, end_date } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
+  const image = req.file ? req.files["image"]?.[0]?.path : null;
 
   if (!title || !target_amount || !end_date || !description) {
     return res.status(400).json({ error: "All fields are required." });
@@ -1758,7 +1749,7 @@ app.put(
     const { userId } = req.params;
     const { name, phone } = req.body;
     const profilePic = req.file
-      ? `http://localhost:5000/uploads/${req.file.filename}`
+      ? req.files["profilePic"]?.[0]?.path
       : null;
 
     if (!name || !phone) {
@@ -1946,7 +1937,7 @@ app.get("/api/referrals/:userId", async (req, res) => {
     );
 
     const rewardsEarned = rewardsEarnedResult.rows[0].rewardsearned || 0;
-    const referralLink = `http://localhost:5173/register/step-1?ref=${userId}`;
+    const referralLink = `https://ifundapp.netlify.app/register/step-1?ref=${userId}`;
 
     res.json({ referrals, rewardsEarned, referralLink });
   } catch (error) {
