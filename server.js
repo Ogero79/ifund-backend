@@ -2699,6 +2699,23 @@ app.get("/api/interests/performance/:userId", async (req, res) => {
   }
 });
 
+app.delete("/superadmin/users/:userId", authenticateToken, authorizeRole("superadmin"), async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+      const deleteUserQuery = "DELETE FROM users WHERE user_id = $1 RETURNING *";
+      const deletedUser = await pool.query(deleteUserQuery, [userId]);
+
+      if (deletedUser.rowCount === 0) {
+          return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User deleted successfully" });
+  } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
