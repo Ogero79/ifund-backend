@@ -733,6 +733,10 @@ app.post("/api/deposits", async (req, res) => {
         .json({ message: "Initial deposit must be at least 500." });
     }
 
+
+    // Call M-Pesa STK Push function
+    await processSTKPush(mpesaNumber, amount);
+
     if (isFirstDeposit) {
       await pool.query(
         "UPDATE users SET account_status = $1 WHERE user_id = $2",
@@ -761,8 +765,6 @@ app.post("/api/deposits", async (req, res) => {
       [userId, "deposit", amount, description || null]
     );
 
-    // Call M-Pesa STK Push function
-    await processSTKPush(mpesaNumber, amount);
 
     const userEmail = userResult.rows[0].email;
 
