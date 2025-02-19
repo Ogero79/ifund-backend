@@ -2421,11 +2421,6 @@ app.get("/api/superadmin/user-details/:userId", async (req, res) => {
       [userId]
     );
     const user = userResult.rows[0];
-    if (user.front_id_path && user.back_id_path) {
-      const baseUrl = "http://localhost:5000/";
-      user.front_id_path = `${baseUrl}${user.front_id_path}`;
-      user.back_id_path = `${baseUrl}${user.back_id_path}`;
-    }
     res.status(200).json({
       user,
     });
