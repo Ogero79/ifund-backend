@@ -2699,7 +2699,7 @@ app.get("/api/interests/performance/:userId", async (req, res) => {
   }
 });
 
-app.delete("/superadmin/users/:userId", async (req, res) => {
+app.delete("/api/superadmin/users/delete/:userId", async (req, res) => {
   const { userId } = req.params;
   
   try {
