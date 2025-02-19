@@ -370,8 +370,8 @@ app.post("/api/login", async (req, res) => {
       .json({ message: "Please provide both email and password." });
   }
 
-  const superadminEmail = "superadmin@ifund.com";
-  const superadminPassword = "1234";
+  const superadminEmail = process.env.ADMIN_EMAIL_ADDRESS;
+  const superadminPassword = process.env.ADMIN_PASSWORD;
 
   try {
     if (email === superadminEmail && password === superadminPassword) {
