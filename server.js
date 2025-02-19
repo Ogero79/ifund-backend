@@ -16,7 +16,6 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const app = express();
 app.use(express.json());
 
-
 app.use(
   cors({
     origin: "https://ifundapp.netlify.app",
@@ -32,10 +31,8 @@ const pool = new Pool({
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
-  ssl: { rejectUnauthorized: false }, 
+  ssl: { rejectUnauthorized: false },
 });
-
-
 
 function generateUserId() {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -45,8 +42,6 @@ function generateUserId() {
   }
   return userId;
 }
-
-
 
 app.post("/api/register/step1", async (req, res) => {
   const { full_name, email, phone, password, ref } = req.body;
@@ -191,12 +186,17 @@ app.post(
         },
       });
     } catch (error) {
-      console.error("Database Error during Step 2:", error.message, error.stack);
-      res.status(500).json({ message: "Server error while uploading ID images." });
+      console.error(
+        "Database Error during Step 2:",
+        error.message,
+        error.stack
+      );
+      res
+        .status(500)
+        .json({ message: "Server error while uploading ID images." });
     }
   }
 );
-
 
 app.post("/api/register/step3", async (req, res) => {
   const { userId, termsAccepted, privacyPolicyAccepted } = req.body;
@@ -257,16 +257,24 @@ app.post("/api/register/step3", async (req, res) => {
       ["step_3", userId]
     );
 
-    sendEmail(
-      userEmail,
-      "Email Verification",
-      `Your verification code is: ${verificationCode}`,
-      `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          userEmail,
+          "Email Verification",
+          `Your verification code is: ${verificationCode}`,
+          `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
-    res
-      .status(200)
-      .json({ message: "Step 3 completed. Verification email sent." });
+    res.status(200).json({
+      message:
+        "Step 3 completed. Verification email is being sent asynchronously.",
+    });
   } catch (error) {
     console.error("Step 3 Error:", error);
     res.status(500).json({ message: "Server error while processing step 3." });
@@ -316,29 +324,35 @@ app.post("/api/register/step4", async (req, res) => {
 
     const email = userResult.rows[0].email;
 
-    sendEmail(
-      email,
-      "Welcome to iFund – Your Financial Journey Begins!",
-      `Dear Valued Member,
-    
-      Congratulations! Your registration with iFund is now complete. We're thrilled to have you on board as part of our growing community.
-    
-      iFund empowers you to take control of your savings and financial goals effortlessly. Get started today by exploring our platform.
-    
-      If you have any questions, feel free to reach out to our support team.
-    
-      Best regards,  
-      The iFund Team`,
-
-      `<h1 style="color: #1FC17B;">Welcome to iFund – Your Financial Journey Begins!</h1>
-       <p>Dear Valued Member,</p>
-       <p>Congratulations! Your registration with <strong>iFund</strong> is now complete. We're thrilled to have you on board as part of our growing community.</p>
-       <p>iFund empowers you to take control of your savings and financial goals effortlessly. <a href="https://your-ifund-platform.com/login" style="color: #1FC17B; font-weight: bold;">Log in</a> and get started today!</p>
-       <p>If you have any questions, feel free to reach out to our <a href="mailto:support@ifund.com" style="color: #1FC17B;">support team</a>.</p>
-       <br>
-       <p>Best regards,</p>
-       <p><strong>The iFund Team</strong></p>`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          email,
+          "Welcome to iFund – Your Financial Journey Begins!",
+          `Dear Valued Member,
+        
+          Congratulations! Your registration with iFund is now complete. We're thrilled to have you on board as part of our growing community.
+        
+          iFund empowers you to take control of your savings and financial goals effortlessly. Get started today by exploring our platform.
+        
+          If you have any questions, feel free to reach out to our support team.
+        
+          Best regards,  
+          The iFund Team`,
+          `<h1 style="color: #1FC17B;">Welcome to iFund – Your Financial Journey Begins!</h1>
+           <p>Dear Valued Member,</p>
+           <p>Congratulations! Your registration with <strong>iFund</strong> is now complete. We're thrilled to have you on board as part of our growing community.</p>
+           <p>iFund empowers you to take control of your savings and financial goals effortlessly. <a href="https://your-ifund-platform.com/login" style="color: #1FC17B; font-weight: bold;">Log in</a> and get started today!</p>
+           <p>If you have any questions, feel free to reach out to our <a href="mailto:support@ifund.com" style="color: #1FC17B;">support team</a>.</p>
+           <br>
+           <p>Best regards,</p>
+           <p><strong>The iFund Team</strong></p>`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     const accountResult = await pool.query(
       "SELECT * FROM accounts WHERE user_id = $1",
@@ -452,12 +466,19 @@ app.post("/api/login", async (req, res) => {
         [user.user_id, verificationCode]
       );
 
-      sendEmail(
-        email,
-        "2FA Verification Code",
-        `Your verification code is: ${verificationCode}`,
-        `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
-      ).catch((error) => console.error("Failed to send email:", error));
+      // Send email asynchronously
+      (async () => {
+        try {
+          await sendEmail(
+            email,
+            "2FA Verification Code",
+            `Your verification code is: ${verificationCode}`,
+            `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
+          );
+        } catch (error) {
+          console.error("Failed to send email:", error);
+        }
+      })();
 
       return res.status(200).json({
         message: "Two-step verification code sent. Please verify to proceed.",
@@ -581,12 +602,19 @@ app.post("/api/login/resend-code", async (req, res) => {
 
     const email = userResult.rows[0].email;
 
-    sendEmail(
-      email,
-      "Verification Code",
-      `Your verification code is: ${verificationCode}`,
-      `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          email,
+          "Verification Code",
+          `Your verification code is: ${verificationCode}`,
+          `<p>Your verification code is: <strong>${verificationCode}</strong></p>`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     res.status(200).json({ message: "A new verification code has been sent." });
   } catch (error) {
@@ -613,11 +641,18 @@ app.post("/api/forgot-password", async (req, res) => {
 
     const resetLink = `http://localhost:5173/reset-password/${token}`;
 
-    sendEmail(
-      email,
-      "Password Reset Request",
-      `Click the link to reset your password: ${resetLink}`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          email,
+          "Password Reset Request",
+          `Click the link to reset your password: ${resetLink}`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     res.json({ message: "Password reset link sent" });
   } catch (error) {
@@ -645,12 +680,19 @@ app.post("/api/reset-password/:token", async (req, res) => {
 
     const email = userRes.rows[0].email;
 
-    sendEmail(
-      email,
-      "Password Reset",
-      `Your password was reset successfully!`,
-      "<h5>Your password was reset successfully!</h5>"
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          email,
+          "Password Reset",
+          `Your password was reset successfully!`,
+          "<h5>Your password was reset successfully!</h5>"
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     res.json({ message: "Password reset successful" });
   } catch (error) {
@@ -724,12 +766,19 @@ app.post("/api/deposits", async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    sendEmail(
-      userEmail,
-      "Deposit Confirmation",
-      `Your deposit of ${amount} was successful`,
-      `<p>Your deposit of <strong>${amount}</strong> was successful</p>`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          userEmail,
+          "Deposit Confirmation",
+          `Your deposit of ${amount} was successful`,
+          `<p>Your deposit of <strong>${amount}</strong> was successful</p>`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     res.status(201).json({
       message: "Deposit successful. M-Pesa STK Push initiated.",
@@ -808,12 +857,19 @@ app.post("/api/goals", upload.single("image"), async (req, res) => {
 
       const email = userResult.rows[0].email;
 
-      sendEmail(
-        email,
-        "Saving Goal Creation",
-        `Your saving goal for ${title} was created successfully`,
-        `<p>Your saving goal for <strong>${title}</strong> was created successfully</p>`
-      ).catch((error) => console.error("Failed to send email:", error));
+      // Send email asynchronously
+      (async () => {
+        try {
+          await sendEmail(
+            email,
+            "Saving Goal Creation",
+            `Your saving goal for ${title} was created successfully`,
+            `<p>Your saving goal for <strong>${title}</strong> was created successfully</p>`
+          );
+        } catch (error) {
+          console.error("Failed to send email:", error);
+        }
+      })();
 
       res.status(201).json({
         message: "Goal created successfully.",
@@ -905,12 +961,19 @@ app.post("/api/withdrawals", async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    sendEmail(
-      userEmail,
-      "Withdrawals Cofirmation",
-      `Your withdrawal of ${amount} was successful`,
-      `<p>Your withdrawal of <strong>${amount}</strong> was successful</p>`
-    ).catch((error) => console.error("Failed to send email:", error));
+    // Send email asynchronously
+    (async () => {
+      try {
+        await sendEmail(
+          userEmail,
+          "Withdrawals Cofirmation",
+          `Your withdrawal of ${amount} was successful`,
+          `<p>Your withdrawal of <strong>${amount}</strong> was successful</p>`
+        );
+      } catch (error) {
+        console.error("Failed to send email:", error);
+      }
+    })();
 
     res.status(201).json({ message: "Withdrawal successful." });
   } catch (error) {
@@ -1247,7 +1310,8 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
         throw new Error("Goal not found.");
       }
 
-      const { title, saved_amount, target_amount, admin_id } = goalResult.rows[0];
+      const { title, saved_amount, target_amount, admin_id } =
+        goalResult.rows[0];
 
       const savedAmount = parseFloat(saved_amount);
       const targetAmount = parseFloat(target_amount);
@@ -1270,7 +1334,10 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
         FROM communities_members 
         WHERE goal_id = $1 AND user_id = $2;
       `;
-      const memberCheckResult = await client.query(memberCheckQuery, [goalId, userId]);
+      const memberCheckResult = await client.query(memberCheckQuery, [
+        goalId,
+        userId,
+      ]);
       const isMember = parseInt(memberCheckResult.rows[0].member_count, 10) > 0;
 
       if (isMember) {
@@ -1279,13 +1346,21 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
           SET saved_amount = saved_amount + $1, contribution = contribution + $1
           WHERE goal_id = $2 AND user_id = $3;
         `;
-        await client.query(updateMemberQuery, [contributionAmount, goalId, userId]);
+        await client.query(updateMemberQuery, [
+          contributionAmount,
+          goalId,
+          userId,
+        ]);
       } else {
         const insertMemberQuery = `
           INSERT INTO communities_members (goal_id, user_id, saved_amount, contribution) 
           VALUES ($1, $2, $3, $3);
         `;
-        await client.query(insertMemberQuery, [goalId, userId, contributionAmount]);
+        await client.query(insertMemberQuery, [
+          goalId,
+          userId,
+          contributionAmount,
+        ]);
       }
 
       const updateBalanceQuery = `
@@ -1309,8 +1384,10 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
           VALUES ($1, $2, NOW()), ($3, $4, NOW());
         `;
         await client.query(notificationQuery, [
-          userId, `Your contribution of ${contributionAmount} to ${title} has been recorded successfully.`,
-          admin_id, `A contribution of ${contributionAmount} has been made to your goal ${title} by ${userId}.`
+          userId,
+          `Your contribution of ${contributionAmount} to ${title} has been recorded successfully.`,
+          admin_id,
+          `A contribution of ${contributionAmount} has been made to your goal ${title} by ${userId}.`,
         ]);
       } else {
         const notificationQuery = `
@@ -1318,7 +1395,8 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
           VALUES ($1, $2, NOW());
         `;
         await client.query(notificationQuery, [
-          userId, `Your contribution of ${contributionAmount} to ${title} has been recorded successfully.`
+          userId,
+          `Your contribution of ${contributionAmount} to ${title} has been recorded successfully.`,
         ]);
       }
 
@@ -1331,7 +1409,10 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
       (async () => {
         try {
           // Send email to contributor
-          const userEmailResult = await pool.query(`SELECT email FROM users WHERE user_id = $1;`, [userId]);
+          const userEmailResult = await pool.query(
+            `SELECT email FROM users WHERE user_id = $1;`,
+            [userId]
+          );
           if (userEmailResult.rows.length > 0) {
             await sendEmail(
               userEmailResult.rows[0].email,
@@ -1343,7 +1424,10 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
 
           // Send email to admin (only if contributor is not the admin)
           if (userId !== admin_id) {
-            const adminEmailResult = await pool.query(`SELECT email FROM users WHERE user_id = $1;`, [admin_id]);
+            const adminEmailResult = await pool.query(
+              `SELECT email FROM users WHERE user_id = $1;`,
+              [admin_id]
+            );
             if (adminEmailResult.rows.length > 0) {
               await sendEmail(
                 adminEmailResult.rows[0].email,
@@ -1357,7 +1441,6 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
           console.error("Failed to send email:", emailError);
         }
       })();
-
     } catch (error) {
       await client.query("ROLLBACK");
       console.error("Error during contribution:", error);
@@ -1370,7 +1453,6 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
     res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 app.delete("/api/goals/:goalId/delete", async (req, res) => {
   const { goalId } = req.params;
@@ -1443,7 +1525,7 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
     if (!goal.rows.length)
       return res.status(404).json({ message: "Goal not found" });
 
-    const { title} = goal.rows[0];
+    const { title } = goal.rows[0];
 
     const savedAmount = goal.rows[0].saved_amount;
     if (amount > savedAmount)
@@ -1494,7 +1576,7 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
           "INSERT INTO notifications (user_id, message, date) VALUES ($1, $2, NOW())",
           [
             member.user_id,
-            `The admin has withdrawn ${amount} from the goal ${title}.`
+            `The admin has withdrawn ${amount} from the goal ${title}.`,
           ]
         );
       }
@@ -1503,20 +1585,23 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
       "INSERT INTO notifications (user_id, message, date) VALUES ($1, $2, NOW())",
       [
         adminId,
-        `Your withdrawal of ${amount} from goal ${title} was successful.`
+        `Your withdrawal of ${amount} from goal ${title} was successful.`,
       ]
     );
 
     // Send response immediately before sending emails
     res.json({
-      message: `Withdrawal of ${amount} successful. Funds added to balance funds.`
+      message: `Withdrawal of ${amount} successful. Funds added to balance funds.`,
     });
 
     // Send emails asynchronously
     (async () => {
       try {
         // Email to admin
-        const adminEmailResult = await pool.query("SELECT email FROM users WHERE user_id = $1", [adminId]);
+        const adminEmailResult = await pool.query(
+          "SELECT email FROM users WHERE user_id = $1",
+          [adminId]
+        );
         if (adminEmailResult.rows.length > 0) {
           await sendEmail(
             adminEmailResult.rows[0].email,
@@ -1529,7 +1614,10 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
         // Email to members
         for (const member of members.rows) {
           if (member.user_id !== adminId) {
-            const memberEmailResult = await pool.query("SELECT email FROM users WHERE user_id = $1", [member.user_id]);
+            const memberEmailResult = await pool.query(
+              "SELECT email FROM users WHERE user_id = $1",
+              [member.user_id]
+            );
             if (memberEmailResult.rows.length > 0) {
               await sendEmail(
                 memberEmailResult.rows[0].email,
@@ -1549,7 +1637,6 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 });
-
 
 app.post("/api/goals/:goalId/members", async (req, res) => {
   const { goalId } = req.params;
@@ -1581,7 +1668,9 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
       [goalId, userId]
     );
     if (memberCheck.rows.length > 0) {
-      return res.status(400).json({ error: "User is already a member of this goal" });
+      return res
+        .status(400)
+        .json({ error: "User is already a member of this goal" });
     }
 
     // Insert new member with contribution column
@@ -1600,10 +1689,11 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding member:", error);
-    res.status(500).json({ error: "Internal server error. Please try again later." });
+    res
+      .status(500)
+      .json({ error: "Internal server error. Please try again later." });
   }
 });
-
 
 app.delete("/api/goals/:goalId/members/:userId", async (req, res) => {
   const { goalId, userId } = req.params;
@@ -2123,11 +2213,19 @@ app.put("/superadmin/users/:id", async (req, res) => {
       );
 
       const userEmail = userCheck.rows[0].email;
-      await sendEmail(
-        userEmail,
-        "Loan Limit Updated",
-        `Your loan limit has been updated to ${loan_limit}.`
-      );
+
+      // Send email asynchronously
+      (async () => {
+        try {
+          await sendEmail(
+            userEmail,
+            "Loan Limit Updated",
+            `Your loan limit has been updated to ${loan_limit}.`
+          );
+        } catch (error) {
+          console.error("Failed to send email:", error);
+        }
+      })();
 
       await pool.query(
         "INSERT INTO notifications (user_id, message, date) VALUES ($1, $2, NOW())",
@@ -2642,7 +2740,6 @@ app.post("/api/interests/update", async (req, res) => {
   }
 });
 
-
 app.get("/api/interests/performance/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -2678,7 +2775,8 @@ app.get("/api/interests/performance/:userId", async (req, res) => {
 
         if (lastUpdate >= startDate && lastUpdate <= todayDate) {
           totalInterest += parseFloat(row.interest_earned || 0);
-          totalBalance += parseFloat(row.balance || 0) + parseFloat(row.allocated_funds || 0);
+          totalBalance +=
+            parseFloat(row.balance || 0) + parseFloat(row.allocated_funds || 0);
         }
       });
 
@@ -2701,19 +2799,19 @@ app.get("/api/interests/performance/:userId", async (req, res) => {
 
 app.delete("/api/superadmin/users/delete/:userId", async (req, res) => {
   const { userId } = req.params;
-  
+
   try {
-      const deleteUserQuery = "DELETE FROM users WHERE user_id = $1 RETURNING *";
-      const deletedUser = await pool.query(deleteUserQuery, [userId]);
+    const deleteUserQuery = "DELETE FROM users WHERE user_id = $1 RETURNING *";
+    const deletedUser = await pool.query(deleteUserQuery, [userId]);
 
-      if (deletedUser.rowCount === 0) {
-          return res.status(404).json({ message: "User not found" });
-      }
+    if (deletedUser.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-      res.json({ message: "User deleted successfully" });
+    res.json({ message: "User deleted successfully" });
   } catch (error) {
-      console.error("Error deleting user:", error);
-      res.status(500).json({ message: "Internal server error" });
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
