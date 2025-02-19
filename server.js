@@ -7,10 +7,11 @@ const path = require("path");
 const cors = require("cors");
 require("dotenv").config();
 const sendEmail = require("./emailService");
-
 const { processSTKPush } = require("./mpesa"); // Import STK Push function
 const crypto = require("crypto");
 const DAILY_RATE = 0.0002739726;
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(express.json());
@@ -34,6 +35,8 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }, 
 });
 
+
+
 function generateUserId() {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let userId = "";
@@ -42,6 +45,8 @@ function generateUserId() {
   }
   return userId;
 }
+
+
 
 app.post("/api/register/step1", async (req, res) => {
   const { full_name, email, phone, password, ref } = req.body;
@@ -126,16 +131,18 @@ app.post("/api/register/step1", async (req, res) => {
   }
 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`
-    );
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "ifundmedia",
+    format: async (req, file) => path.extname(file.originalname).substring(1),
+    public_id: (req, file) => `${file.fieldname}-${Date.now()}`,
   },
 });
 
@@ -151,17 +158,15 @@ const upload = multer({
   },
 });
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 app.post(
   "/api/register/step2",
   upload.fields([{ name: "front_id" }, { name: "back_id" }]),
   async (req, res) => {
     const { userId } = req.body;
-    const frontIdPath = req.files["front_id"]?.[0]?.path;
-    const backIdPath = req.files["back_id"]?.[0]?.path;
+    const frontIdUrl = req.files["front_id"]?.[0]?.path;
+    const backIdUrl = req.files["back_id"]?.[0]?.path;
 
-    if (!userId || !frontIdPath || !backIdPath) {
+    if (!userId || !frontIdUrl || !backIdUrl) {
       return res
         .status(400)
         .json({ message: "Please provide userId and both ID images." });
@@ -170,7 +175,7 @@ app.post(
     try {
       await pool.query(
         "INSERT INTO user_ids (user_id, front_id_path, back_id_path) VALUES ($1, $2, $3)",
-        [userId, frontIdPath, backIdPath]
+        [userId, frontIdUrl, backIdUrl]
       );
 
       await pool.query(
@@ -181,22 +186,17 @@ app.post(
       res.status(201).json({
         message: "Step 2 completed. Proceed to step 3.",
         filesUploaded: {
-          front_id: req.files["front_id"]?.[0]?.originalname,
-          back_id: req.files["back_id"]?.[0]?.originalname,
+          front_id: frontIdUrl,
+          back_id: backIdUrl,
         },
       });
     } catch (error) {
-      console.error(
-        "Database Error during Step 2:",
-        error.message,
-        error.stack
-      );
-      res
-        .status(500)
-        .json({ message: "Server error while uploading ID images." });
+      console.error("Database Error during Step 2:", error.message, error.stack);
+      res.status(500).json({ message: "Server error while uploading ID images." });
     }
   }
 );
+
 
 app.post("/api/register/step3", async (req, res) => {
   const { userId, termsAccepted, privacyPolicyAccepted } = req.body;
