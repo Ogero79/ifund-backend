@@ -787,7 +787,8 @@ app.post("/api/deposits", async (req, res) => {
 app.post("/api/goals", upload.single("image"), async (req, res) => {
   const { user_id, title, target_amount, description, end_date, deposit } =
     req.body;
-  const image = req.file ? req.files["image"]?.[0]?.path : null;
+  const image = req.file ? req.file.path : null;
+
   if (
     !user_id ||
     !title ||
@@ -1222,7 +1223,8 @@ app.get("/api/goal/:goalId", async (req, res) => {
 app.put("/api/goals/:goalId", upload.single("image"), async (req, res) => {
   const { goalId } = req.params;
   const { title, target_amount, description, end_date } = req.body;
-  const image = req.file ? req.files["image"]?.[0]?.path : null;
+  const image = req.file ? req.file.path : null;
+
 
   if (!title || !target_amount || !end_date || !description) {
     return res.status(400).json({ error: "All fields are required." });
@@ -1719,10 +1721,7 @@ app.put(
   async (req, res) => {
     const { userId } = req.params;
     const { name, phone } = req.body;
-    const profilePic = req.file
-      ? req.files["profilePic"]?.[0]?.path
-      : null;
-
+    const profilePic = req.file ? req.file.path : null;
     if (!name || !phone) {
       return res
         .status(400)
