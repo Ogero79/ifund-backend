@@ -7,7 +7,7 @@ const path = require("path");
 const cors = require("cors");
 require("dotenv").config();
 const sendEmail = require("./emailService");
-const { processSTKPush } = require("./mpesa"); // Import STK Push function
+const { processSTKPush } = require("./mpesa"); 
 const crypto = require("crypto");
 const DAILY_RATE = 0.0002739726;
 const cloudinary = require("cloudinary").v2;
@@ -257,7 +257,6 @@ app.post("/api/register/step3", async (req, res) => {
       ["step_3", userId]
     );
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -324,7 +323,6 @@ app.post("/api/register/step4", async (req, res) => {
 
     const email = userResult.rows[0].email;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -466,7 +464,6 @@ app.post("/api/login", async (req, res) => {
         [user.user_id, verificationCode]
       );
 
-      // Send email asynchronously
       (async () => {
         try {
           await sendEmail(
@@ -602,7 +599,6 @@ app.post("/api/login/resend-code", async (req, res) => {
 
     const email = userResult.rows[0].email;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -641,7 +637,6 @@ app.post("/api/forgot-password", async (req, res) => {
 
     const resetLink = `https://ifundapp.netlify.app/reset-password/${token}`;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -680,7 +675,6 @@ app.post("/api/reset-password/:token", async (req, res) => {
 
     const email = userRes.rows[0].email;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -734,7 +728,6 @@ app.post("/api/deposits", async (req, res) => {
     }
 
 
-    // Call M-Pesa STK Push function
     await processSTKPush(mpesaNumber, amount);
 
     if (isFirstDeposit) {
@@ -768,7 +761,6 @@ app.post("/api/deposits", async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -859,7 +851,6 @@ app.post("/api/goals", upload.single("image"), async (req, res) => {
 
       const email = userResult.rows[0].email;
 
-      // Send email asynchronously
       (async () => {
         try {
           await sendEmail(
@@ -963,7 +954,6 @@ app.post("/api/withdrawals", async (req, res) => {
 
     const userEmail = userResult.rows[0].email;
 
-    // Send email asynchronously
     (async () => {
       try {
         await sendEmail(
@@ -1370,7 +1360,6 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
       `;
       await client.query(updateAccountQuery, [contributionAmount, userId]);
 
-      // Insert notifications
       if (userId !== admin_id) {
         const notificationQuery = `
           INSERT INTO notifications (user_id, message, date) 
@@ -1395,13 +1384,10 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
 
       await client.query("COMMIT");
 
-      // Send response immediately before sending emails
       res.status(200).json({ message: "Contribution successful." });
 
-      // Send emails asynchronously
       (async () => {
         try {
-          // Send email to contributor
           const userEmailResult = await pool.query(
             `SELECT email FROM users WHERE user_id = $1;`,
             [userId]
@@ -1415,7 +1401,6 @@ app.post("/api/goals/:goalId/contribute", async (req, res) => {
             );
           }
 
-          // Send email to admin (only if contributor is not the admin)
           if (userId !== admin_id) {
             const adminEmailResult = await pool.query(
               `SELECT email FROM users WHERE user_id = $1;`,
@@ -1511,7 +1496,6 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
   const { userId, amount } = req.body;
   const { goalId } = req.params;
   try {
-    // Fetch goal details
     const goal = await pool.query("SELECT * FROM goals WHERE goal_id = $1", [
       goalId,
     ]);
@@ -1524,7 +1508,6 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
     if (amount > savedAmount)
       return res.status(400).json({ message: "Insufficient funds" });
 
-    // Fetch goal members and their roles
     const members = await pool.query(
       "SELECT user_id, saved_amount, goal_role FROM communities_members WHERE goal_id = $1",
       [goalId]
@@ -1536,13 +1519,12 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
         if (member.goal_role === "admin") {
           adminId = member.user_id;
         }
-        const userShare = (member.saved_amount / savedAmount) * amount; // Deduct only proportionally
+        const userShare = (member.saved_amount / savedAmount) * amount; 
         await pool.query(
           "UPDATE communities_members SET saved_amount = GREATEST(saved_amount - $1, 0) WHERE user_id = $2 AND goal_id = $3",
           [userShare, member.user_id, goalId]
         );
 
-        // Deduct from allocated funds of the user
         await pool.query(
           "UPDATE accounts SET allocated_funds = GREATEST(allocated_funds - $1, 0) WHERE user_id = $2",
           [userShare, member.user_id]
@@ -1550,19 +1532,14 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
       }
     }
 
-    // Deduct amount from goal's saved amount
     await pool.query(
       "UPDATE goals SET saved_amount = saved_amount - $1 WHERE goal_id = $2",
       [amount, goalId]
     );
-
-    // Update user's balance funds
     await pool.query(
       "UPDATE accounts SET balance = balance + $1 WHERE user_id = $2",
       [amount, userId]
     );
-
-    // Insert notifications
     for (const member of members.rows) {
       if (member.user_id !== adminId) {
         await pool.query(
@@ -1582,15 +1559,12 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
       ]
     );
 
-    // Send response immediately before sending emails
     res.json({
       message: `Withdrawal of ${amount} successful. Funds added to balance funds.`,
     });
 
-    // Send emails asynchronously
     (async () => {
       try {
-        // Email to admin
         const adminEmailResult = await pool.query(
           "SELECT email FROM users WHERE user_id = $1",
           [adminId]
@@ -1604,7 +1578,6 @@ app.post("/api/goal/:goalId/withdraw", async (req, res) => {
           );
         }
 
-        // Email to members
         for (const member of members.rows) {
           if (member.user_id !== adminId) {
             const memberEmailResult = await pool.query(
@@ -1636,7 +1609,6 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
   const { userId } = req.body;
 
   try {
-    // Check if goal exists
     const goalResult = await pool.query(
       "SELECT * FROM goals WHERE goal_id = $1",
       [goalId]
@@ -1645,7 +1617,6 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
       return res.status(404).json({ error: "Goal not found" });
     }
 
-    // Check if user exists
     const userResult = await pool.query(
       "SELECT * FROM users WHERE user_id = $1",
       [userId]
@@ -1655,7 +1626,6 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
     }
     const user = userResult.rows[0];
 
-    // Check if user is already a member
     const memberCheck = await pool.query(
       "SELECT * FROM communities_members WHERE goal_id = $1 AND user_id = $2",
       [goalId, userId]
@@ -1666,7 +1636,6 @@ app.post("/api/goals/:goalId/members", async (req, res) => {
         .json({ error: "User is already a member of this goal" });
     }
 
-    // Insert new member with contribution column
     const query = `
       INSERT INTO communities_members (goal_id, user_id, saved_amount, contribution, joined_at)
       VALUES ($1, $2, $3, $4, NOW())
@@ -2207,7 +2176,6 @@ app.put("/superadmin/users/:id", async (req, res) => {
 
       const userEmail = userCheck.rows[0].email;
 
-      // Send email asynchronously
       (async () => {
         try {
           await sendEmail(
